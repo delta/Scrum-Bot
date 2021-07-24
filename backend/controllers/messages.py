@@ -486,7 +486,7 @@ def getAllDiscussionsByAnAuthor(authorId: str, **kwargs):
         return parseControllerResponse(
             data={"messages": resp, "totalSize": messageLength},
             statuscode=200,
-            message="Successfully found the discussions."
+            message="Successfully found the discussions.",
         )
 
     except AssertionError:
@@ -588,7 +588,7 @@ def getMessageWithMessageId(messageId: str, **kwargs):
 def getDiscussionsWithMatchingTags(tag: str, **kwargs):
     """Finds all the discussions contain the given tag"""
     isResponseParsed = kwargs.get("isParsed", False)
-    
+
     logging.info("Trying to find all the discussions with the matching tag: ", tag)
 
     # create regular expression for matching the tag

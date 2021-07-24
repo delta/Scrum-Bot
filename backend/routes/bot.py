@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Body, Response
+from fastapi import APIRouter, Body, Response, Request
 from fastapi.encoders import jsonable_encoder
 import logging
 
 from app.helper import ResponseModel, ErrorResponseModel
+from app.auth import Authorization
 
 from controllers.constants import findCurrentScrum, setCurrentScrum
 from controllers.scrum import createScrum, findScrumNameWithTheGivenId
@@ -24,6 +25,7 @@ from schema.messages import (
 )
 
 router = APIRouter()
+botAuthHandler = Authorization(type="bot")
 
 
 @router.get(
@@ -31,13 +33,14 @@ router = APIRouter()
     response_description="Starts a scrum",
     response_model=GenericResponseSchema[StartScrumResponse],
 )
-def startScrum():
+def startScrum(request: Request):
     """Starts a scrum and returns scrumId and scrumName
     ## Requirements
     * There **should not** be another active scrum.
     * If there is an active scrum, it will throw a **400(Bad Request)** error"""
     # Check if a scrum is already active
     # if not start a scrum and update config table
+    botAuthHandler.authenticateUser(request)
     try:
         scrum = findCurrentScrum()
         assert not scrum
@@ -67,10 +70,11 @@ def startScrum():
     response_description="Ends an active scrum",
     response_model=GenericResponseSchema[EndScrumResponse],
 )
-def endScrum():
+def endScrum(request: Request):
     """Ends the current active scrum and returns the scrum name
     ### **NOTE :** Don't forget to end the scrum after it's over."""
     # TODO: ? Maybe set a cron job for ending the scrum
+    botAuthHandler.authenticateUser(request)
     try:
         scrum = findCurrentScrum()
         assert scrum
@@ -105,7 +109,8 @@ def endScrum():
     response_model=GenericResponseSchema[CreateMessageResponseModel],
 )
 def addMessage(
-    message: CreateMessageSchema = Body(..., examples=CreateMessageSchema.getExample())
+    request: Request,
+    message: CreateMessageSchema = Body(..., examples=CreateMessageSchema.getExample()),
 ):
     """Adds a messsage (Discussion / Reply) with the given data, and returns true or false
     * Only a discussion can contain tags array
@@ -113,6 +118,7 @@ def addMessage(
     * and a valid **Parent Message Id** as **parentMessage**"""
     # add message and send True or False
 
+    botAuthHandler.authenticateUser(request)
     (isValid, error) = message.checkIfValidMessage()
 
     if not isValid:
@@ -137,12 +143,15 @@ def addMessage(
     response_model=GenericResponseSchema[UpdateMessageResponseModel],
 )
 def updateMessage(
+    request: Request,
     newMessage: UpdateMessageSchema = Body(
         ..., examples=UpdateMessageSchema.getExample()
-    )
+    ),
 ):
     """Updates the the message with the given id, and sends whether it was successful. (true/false)"""
     # Update message and send True or False
+
+    botAuthHandler.authenticateUser(request)
     resp = UpdateMessageInDatabase(message=newMessage, isParsed=True)
 
     return (
@@ -162,9 +171,12 @@ def updateMessage(
     response_model=GenericResponseSchema[DeleteMessageResponseModel],
 )
 def deleteMessage(
-    message: DeleteMessageSchema = Body(..., examples=DeleteMessageSchema.getExample())
+    request: Request,
+    message: DeleteMessageSchema = Body(..., examples=DeleteMessageSchema.getExample()),
 ):
     """Deletes the message with the given id, and returns true or false"""
+
+    botAuthHandler.authenticateUser(request)
     resp = DeleteMessageInDatabase(message=message, isParsed=True)
 
     return (

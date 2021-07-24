@@ -38,13 +38,13 @@ class GetScrumWithGivenIdResponseModel(BaseModel):
 
 def scrumHelper(scrum: Scrum):
     """Converts a single scrum document returned by a mongo to a dict"""
-    time = datetime.strptime(str(scrum.created_at), '%Y-%m-%d %H:%M:%S.%f')
+    time = datetime.strptime(str(scrum.created_at), "%Y-%m-%d %H:%M:%S.%f")
     print(scrum.messages)
     return {
         "id": scrum.id,
         "objId": str(scrum.id),
         "mongoDocument": scrum,
         "name": scrum.name,
-        "created_at": time.strftime('%d %b %Y'),
+        "created_at": time.strftime("%d %b %Y"),
         "messages": messageListHelper(scrum.messages),
     }

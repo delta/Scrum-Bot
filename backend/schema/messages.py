@@ -234,19 +234,19 @@ class GetDiscussionsPaginatedResponseModel(GetDiscussionsWithMatchingTagResponse
 
 def messageHelper(message: Message):
     """Converts a single message document returned by a mongo to a dict"""
-    time = datetime.strptime(str(message.timeStamp), '%Y-%m-%d %H:%M:%S.%f')
+    time = datetime.strptime(str(message.timeStamp), "%Y-%m-%d %H:%M:%S.%f")
 
     messageDict = {
         "messageId": message.messageId,
         "message": message.message,
         "author": MemberInDBSchema(**memberHelper(message.author)),
-        "timestamp": time.strftime('%b %d,%Y'),
+        "timestamp": time.strftime("%b %d,%Y"),
         "replies": messageListHelper(message.replies),
         "mongoDocument": message,
     }
 
     messageDict["tags"] = message.tags
-    
+
     if message.parentMessage:
 
         if not isinstance(message.parentMessage, LazyReference):

@@ -1,19 +1,19 @@
-import os
-from fastapi.param_functions import Depends
 import uvicorn
-from fastapi import FastAPI, Header, Request, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.events import createStartAppHandler, createStopAppHandler
+from app.config import PORT, DEBUG, FRONTEND_URL, LOGGING_LEVEL, RELOAD
+from app.logging import setup_logging
+
 from routes.auth import router as member_router
 from routes.bot import router as bot_router
-from app.config import FRONTEND_URL
 from routes.api import router as api_router
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, debug=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=RELOAD, debug=DEBUG)
 
-app = FastAPI(debug=True)
+app = FastAPI(debug=True, logging_level=LOGGING_LEVEL)
 
 origins = [FRONTEND_URL]
 

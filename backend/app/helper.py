@@ -1,18 +1,22 @@
 # Contains all helper functions, which is used to parse input and output
 import enum
 from typing import Optional
+
 from fastapi.exceptions import HTTPException
 
+from app.config import DEBUG
+
+
 def ResponseModel(data: dict, message="Success"):
-    """    Standard template for a response returned by the server.
+    """Standard template for a response returned by the server.
 
-	Args:
-		data (any): any data which is to be returned by the server.
-		message (str, optional): Any additional message you want to send to the user.Defaults to "Success".
+    Args:
+            data (any): any data which is to be returned by the server.
+            message (str, optional): Any additional message you want to send to the user.Defaults to "Success".
 
-	Returns:
-		[dict]: a dict containting {data, code:200, message}
-	"""
+    Returns:
+            [dict]: a dict containting {data, code:200, message}
+    """
     return {
         "data": data,
         "code": 200,
@@ -20,23 +24,25 @@ def ResponseModel(data: dict, message="Success"):
     }
 
 
-def ErrorResponseModel(error, statuscode: int=500, message: str="Error"):
+def ErrorResponseModel(error, statuscode: int = 500, message: str = "Error"):
     """Standard template for a error returned by the server.
 
-	Args:
-		error (error): Helpful error message send to the user
-		message (str): Any additional message you want to send to the user. Defaults to "Error"
-		code (int, optional): Status Code of the error Message. Defaults to 500.
+    Args:
+            error (error): Helpful error message send to the user
+            message (str): Any additional message you want to send to the user. Defaults to "Error"
+            code (int, optional): Status Code of the error Message. Defaults to 500.
 
-	Returns:
-		[dict]: A dict containing {error, code, message}
-	"""
+    Returns:
+            [dict]: A dict containing {error, code, message}
+    """
     errorMsg = {"error": error, "message": message}
     raise HTTPException(status_code=statuscode, detail=errorMsg)
 
+
 def parseControllerResponse(data, statuscode: int, **kwargs):
-    error = kwargs.get('error', None)
-    message = kwargs.get('message', None)
+    error = kwargs.get("error", None)
+    message = kwargs.get("message", None)
+
     class Statuscode(enum.Enum):
         Success = 200
         BadRequest = 400  # wrong data
@@ -46,13 +52,17 @@ def parseControllerResponse(data, statuscode: int, **kwargs):
         InternalServerError = 500
         DuplicateKey = 11000  # Mongo throws a 11000 error when there is a duplicate key
 
+    # Generic error message for production env
+    if not DEBUG and statuscode == 500:
+        error = "Something went wrong, try again later"
+
     resp = {
         "data": data,
         "statusCode": statuscode,
         "success": statuscode == 200,
         "statusMessage": (Statuscode(statuscode)).name,
-        "error": error if error else None,  # TODO: Add generic message in production
-        "message": message if message else None
+        "error": error if error else None,
+        "message": message if message else None,
     }
 
     # set duplicate key error status code to 400

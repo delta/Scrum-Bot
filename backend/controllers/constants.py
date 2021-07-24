@@ -1,25 +1,37 @@
 from fastapi.logger import logging
 from models.constants import Constant
-from app.config import CONSTANTS, CONSTANT_DEFAULT_VALUES
+from app.config import CONSTANTS, CONSTANTS_DEFAULT_VALUES
 
 
 def findCurrentScrum():
     try:
+        logging.info("Trying to find the current scrum")
         [currentScrum] = Constant.objects(name="currentscrum")
+        logging.debug(
+            'Got the value "{}", while searching for the current scrum'.format(
+                currentScrum.value
+            )
+        )
+        logging.info("Successfully found the current scrum")
+
         return currentScrum.value
     except Exception as e:
-        print(e)
+        logging.error("Couldn't find the current scrum due to", e)
+        return None
 
 
 def setCurrentScrum(scrumId=""):
     """Sets the current scrum to the given id, or sets it to a empty string"""
     try:
+        logging.info("Trying to set the current active scrum to ", scrumId)
         [currentScrum] = Constant.objects(name="currentscrum")
         currentScrum.value = scrumId
         currentScrum.save()
+        logging.info("Successfully set the current active scrum to ", scrumId)
         return True
     except Exception as e:
-        print(e)
+        logging.error("Couldn't set the current scrum due to ", e)
+        return False
 
 
 def initConstants():
@@ -27,12 +39,12 @@ def initConstants():
 
     logging.info("Initialzing Constants in database")
 
-    if len(CONSTANTS) != len(CONSTANT_DEFAULT_VALUES):
+    if len(CONSTANTS) != len(CONSTANTS_DEFAULT_VALUES):
         logging.error("Invalid data given for constants array")
 
         errorStr = "Invalid CONSTANTS and CONSTANT_DEFAULT_VALUE array provided. \
             CONSTANTS : {}, CONSTANT_DEFAULT_VALUE: {}".format(
-            CONSTANTS, CONSTANT_DEFAULT_VALUES
+            CONSTANTS, CONSTANTS_DEFAULT_VALUES
         )
         logging.error(errorStr)
 
@@ -63,11 +75,11 @@ def initConstants():
         logging.debug(
             "Creating a new config {} with the value\
                 {}".format(
-                uninitializedConstant, CONSTANT_DEFAULT_VALUES[index]
+                uninitializedConstant, CONSTANTS_DEFAULT_VALUES[index]
             )
         )
         newConstant = Constant(
-            name=uninitializedConstant, value=CONSTANT_DEFAULT_VALUES[index]
+            name=uninitializedConstant, value=CONSTANTS_DEFAULT_VALUES[index]
         )
         newConstant.save()
 

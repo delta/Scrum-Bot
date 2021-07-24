@@ -10,6 +10,5 @@ class GenericResponseSchema(GenericModel, Generic[DataT]):
     code: int = Field(...)
     message: str = Field(...)
 
-    data : Optional[DataT]
+    data: Optional[DataT]
     error: Optional[dict]
-
