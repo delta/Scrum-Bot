@@ -33,14 +33,13 @@ botAuthHandler = Authorization(type="bot")
     response_description="Starts a scrum",
     response_model=GenericResponseSchema[StartScrumResponse],
 )
-def startScrum(request: Request):
+def startScrum():
     """Starts a scrum and returns scrumId and scrumName
     ## Requirements
     * There **should not** be another active scrum.
     * If there is an active scrum, it will throw a **400(Bad Request)** error"""
     # Check if a scrum is already active
     # if not start a scrum and update config table
-    botAuthHandler.authenticateUser(request)
     try:
         scrum = findCurrentScrum()
         assert not scrum
@@ -70,11 +69,10 @@ def startScrum(request: Request):
     response_description="Ends an active scrum",
     response_model=GenericResponseSchema[EndScrumResponse],
 )
-def endScrum(request: Request):
+def endScrum():
     """Ends the current active scrum and returns the scrum name
     ### **NOTE :** Don't forget to end the scrum after it's over."""
     # TODO: ? Maybe set a cron job for ending the scrum
-    botAuthHandler.authenticateUser(request)
     try:
         scrum = findCurrentScrum()
         assert scrum
@@ -109,7 +107,6 @@ def endScrum(request: Request):
     response_model=GenericResponseSchema[CreateMessageResponseModel],
 )
 def addMessage(
-    request: Request,
     message: CreateMessageSchema = Body(..., examples=CreateMessageSchema.getExample()),
 ):
     """Adds a messsage (Discussion / Reply) with the given data, and returns true or false
@@ -118,7 +115,6 @@ def addMessage(
     * and a valid **Parent Message Id** as **parentMessage**"""
     # add message and send True or False
 
-    botAuthHandler.authenticateUser(request)
     (isValid, error) = message.checkIfValidMessage()
 
     if not isValid:
@@ -143,7 +139,6 @@ def addMessage(
     response_model=GenericResponseSchema[UpdateMessageResponseModel],
 )
 def updateMessage(
-    request: Request,
     newMessage: UpdateMessageSchema = Body(
         ..., examples=UpdateMessageSchema.getExample()
     ),
@@ -151,7 +146,6 @@ def updateMessage(
     """Updates the the message with the given id, and sends whether it was successful. (true/false)"""
     # Update message and send True or False
 
-    botAuthHandler.authenticateUser(request)
     resp = UpdateMessageInDatabase(message=newMessage, isParsed=True)
 
     return (
@@ -171,12 +165,10 @@ def updateMessage(
     response_model=GenericResponseSchema[DeleteMessageResponseModel],
 )
 def deleteMessage(
-    request: Request,
     message: DeleteMessageSchema = Body(..., examples=DeleteMessageSchema.getExample()),
 ):
     """Deletes the message with the given id, and returns true or false"""
 
-    botAuthHandler.authenticateUser(request)
     resp = DeleteMessageInDatabase(message=message, isParsed=True)
 
     return (

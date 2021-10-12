@@ -22,17 +22,22 @@ from schema.jwt import JWTToken, _JWTUser
 # generate a jwt with the given data
 def generateJwt(data: _JWTUser):
     try:
-        algorithm = JWT_ALGORITHM
-        jwtSecret = JWT_SECRET
         tokenExpireTime = JWT_EXPIRE_TIME
 
-        payload = JWTToken(**{"sub": data.copy()})
+        payload = JWTToken(**data)
         if tokenExpireTime != 0:
             payload.exp = datetime.now() + timedelta(seconds=tokenExpireTime)
+        else:
+            delattr(payload, "exp")
 
-        return jwt.encode(payload.dict(), jwtSecret, algorithm=algorithm)
+        token = jwt.encode(payload.dict(), JWT_SECRET, JWT_ALGORITHM)
+
+        print("token : ", token)
+
+        return token
+
     except Exception as e:
-        print(e)
+        logging.error(e)
         print("Couldnt generate jwt")
 
 
@@ -51,13 +56,11 @@ def validateDateString(start: str, end: str):
         assert len(startDateStr) == 3 and len(endDateStr) == 3, "invalidDateString"
 
         assert int(endDateStr[2]) > 2000 and int(startDateStr[2]) > 2000, "invalidYear"
-        
+
         startDate = datetime(
             int(startDateStr[2]), int(startDateStr[1]), int(startDateStr[0])
         )
-        endDate = datetime(
-            int(endDateStr[2]), int(endDateStr[1]), int(endDateStr[0])
-        )
+        endDate = datetime(int(endDateStr[2]), int(endDateStr[1]), int(endDateStr[0]))
         assert endDate >= startDate, "invalidValues"
 
         return (startDate, endDate), None

@@ -40,7 +40,12 @@ class CreateMemberSchema(BaseModel):
         return v
 
     # helper function to generate salt and hash for the password
-    def hashPassword(self):
+    def hasPassword(self):
+        self.password = self.hashGivenText(self.password)
+        return
+
+    @staticmethod
+    def hashGivenText(self, password: str):
         # genrates 32 random bytes
         salt = os.urandom(32)
         salt = salt.hex()
@@ -49,13 +54,13 @@ class CreateMemberSchema(BaseModel):
         # generates 128 bit key
         key = hashlib.pbkdf2_hmac(
             "sha256",
-            self.password.encode("utf-8"),
+            password.encode("utf-8"),
             salt.encode("utf-8"),
             int(1e6),
             dklen=128,
         )
-        self.password = salt + "." + key.hex()
-        return
+        password = salt + "." + key.hex()
+        return password
 
     class Config:
         schema_extra = {
@@ -72,12 +77,41 @@ class CreateMemberSchema(BaseModel):
 
 class UpdateMemberSchema(BaseModel):
     """Update member Member Schema.
-    Can contain one or more field from {name, rollno, batch, discordHandle, password, password_repeat}"""
+    Must contain roll no. Can contain one or more field from {name, batch, discordHandle, password, password_repeat}"""
 
     name: Optional[str]
-    rollno: Optional[int]
+    rollno: int = Field(...)
     batch: Optional[int]
     discordHandle: Optional[str]
+    password: Optional[str]
+    password_repeat: Optional[str]
+
+    # Check if the discordHandle contains a '#' if it exists
+    @validator("discordHandle")
+    def discordHandleMustContainHash(cls, v, values):
+        if not v:
+            return None
+        if "#" not in v:
+            raise ValueError("Discord handle must contain '#'")
+        return v
+
+    # Check if password is at least 6 characters long
+    @validator("password")
+    def passwordLongEnough(cls, v, values, **kwargs):
+        if not v:
+            return None
+        if len(v) < 6:
+            raise ValueError("Password is too short")
+        return v
+
+    # check if password and repeat_password match
+    @validator("password_repeat", always=True)
+    def checkPasswordMatch(cls, v, values):
+        if "password" not in values and not v:
+            return None
+        if v != values["password"]:
+            raise ValueError("passwords do not match")
+        return v
 
     class Config:
         schema_extra = {
@@ -160,6 +194,14 @@ class GetAllMembersResponseModel(BaseModel):
 
 class GetSingleMemberResponseModel(BaseModel):
     member: SingleMemberResponseModel
+
+
+class GetMyUserModel(GetSingleMemberResponseModel):
+    pass
+
+
+class UpdateMyUserModel(GetSingleMemberResponseModel):
+    pass
 
 
 # HELPER FUNCTIONS

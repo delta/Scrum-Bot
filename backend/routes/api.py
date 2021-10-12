@@ -1,7 +1,9 @@
 from logging import error
-from fastapi import FastAPI, APIRouter, Request, Response
+from fastapi import FastAPI, APIRouter, Request, Response, Body
 from datetime import datetime
 from typing import Optional
+
+from fastapi.param_functions import Depends
 
 from controllers.scrum import (
     findAllScrums,
@@ -14,7 +16,12 @@ from controllers.messages import (
     getDiscussionsWithMatchingTags,
     getMessageWithMessageId,
 )
-from controllers.members import getAllMembersFromDB, getMemberWithGivenId
+from controllers.members import (
+    getAllMembersFromDB,
+    getMemberWithGivenId,
+    updateMemberWithGivenDetails,
+)
+from schema.jwt import JWTToken
 
 from schema.response import GenericResponseSchema
 from schema.scrum import (
@@ -27,7 +34,13 @@ from schema.messages import (
     GetDiscussionsWithMatchingTagResponseModel,
     GetMessageWithMessageIdResponseModel,
 )
-from schema.members import GetAllMembersResponseModel, GetSingleMemberResponseModel
+from schema.members import (
+    GetAllMembersResponseModel,
+    GetMyUserModel,
+    GetSingleMemberResponseModel,
+    UpdateMemberSchema,
+    UpdateMyUserModel,
+)
 
 from app.helper import ResponseModel, ErrorResponseModel
 from app.utils import validateDateString
@@ -42,9 +55,8 @@ authHandler = Authorization(type="jwt")
     response_description="Gets all scrums",
     response_model=GenericResponseSchema[GetAllScrumsResponseModel],
 )
-def getAllScrums(request: Request):
+def getAllScrums():
     """Finds all the scrums and returns an array of scrums"""
-    authHandler.authenticateUser(request)
     resp = findAllScrums(excludeMessages=True, isParsed=True)
     if resp["statusCode"] == 200:
         return ResponseModel(data={"scrums": resp["data"]})
@@ -56,12 +68,14 @@ def getAllScrums(request: Request):
     response_description="Gets all scrums between the given interval. Date should be of the format DD-MM-YYYY",
     response_model=GenericResponseSchema[GetAllScrumsBetweenGivenIntervalResponseModel],
 )
-def getAllScrumsInGivenInterval(start: str, end: str, request: Request):
+def getAllScrumsInGivenInterval(
+    start: str,
+    end: str,
+):
     """Finds all the scrums in the given interval.
     Both the dates(start and end) should be of the format **DD-MM-YYYY**."""
-    authHandler.authenticateUser(request)
     ((startDate, endDate), errorMsg) = validateDateString(start, end)
-    
+
     if errorMsg:
         return ErrorResponseModel(error={"error": errorMsg}, statuscode=400)
 
@@ -78,11 +92,12 @@ def getAllScrumsInGivenInterval(start: str, end: str, request: Request):
     response_description="The scrum with the given id along with its disussions along with replies",
     response_model=GenericResponseSchema[GetScrumWithGivenIdResponseModel],
 )
-def getScrumWithGivenId(scrumId: str, request: Request):
+def getScrumWithGivenId(
+    scrumId: str,
+):
     """Finds the scrums with the given id and returns a the scrum details and
     all the **discussions** which occurred during that scrum."""
 
-    authHandler.authenticateUser(request)
     resp = findScrumWithGivenId(scrumId=scrumId, isParsed=True)
 
     if [resp["statusCode"] == 200]:
@@ -102,7 +117,6 @@ def getScrumWithGivenId(scrumId: str, request: Request):
     response_model=GenericResponseSchema[GetDiscussionsPaginatedResponseModel],
 )
 def getDiscussionsPaginated(
-    request: Request,
     limit: Optional[int] = None,
     offset: int = 0,
     author: Optional[str] = None,
@@ -112,7 +126,6 @@ def getDiscussionsPaginated(
         1. **Limit and offset** - Pagination
         2. **Author** - Gets all the discussions authored by the given user.
     - A request can contain limit and offest **or** author. **It cannot contain both.**"""
-    authHandler.authenticateUser(request)
     resp = None
 
     if limit and not author:
@@ -152,12 +165,13 @@ def getDiscussionsPaginated(
     response_description="A array of all the discussions with matching tag",
     response_model=GenericResponseSchema[GetDiscussionsWithMatchingTagResponseModel],
 )
-def getDiscussionsWithMatchingTag(tag: str, request: Request):
+def getDiscussionsWithMatchingTag(
+    tag: str,
+):
     """Finds all the discussions which contains the tag query,
     and returns an array of found discussions
     ### NOTE : Since this is an expensive and long process, don't spam multiple requests to this end point"""
 
-    authHandler.authenticateUser(request)
     resp = getDiscussionsWithMatchingTags(tag=tag, isParsed=True)
 
     if resp["statusCode"] == 200:
@@ -173,9 +187,10 @@ def getDiscussionsWithMatchingTag(tag: str, request: Request):
     response_description="Finds the discussion with the given discusssionId",
     response_model=GenericResponseSchema[GetMessageWithMessageIdResponseModel],
 )
-def getDiscussionWithDiscussionId(discussionId: str, request: Request):
+def getDiscussionWithDiscussionId(
+    discussionId: str,
+):
     """Finds the discussion **along with its replies** with the given discussionId"""
-    authHandler.authenticateUser(request)
     resp = getMessageWithMessageId(messageId=discussionId, isParsed=True)
 
     if resp["statusCode"] == 200:
@@ -194,12 +209,49 @@ def getDiscussionWithDiscussionId(discussionId: str, request: Request):
     response_description="Returns an array of all the members along with their details",
     response_model=GenericResponseSchema[GetAllMembersResponseModel],
 )
-def getAllMembers(request: Request, response: Response):
+def getAllMembers():
     """Finds and returns an array of all the members along with their details."""
-    authHandler.authenticateUser(request)
     resp = getAllMembersFromDB(isParsed=True)
     if resp["statusCode"] == 200:
         return ResponseModel(data={"members": resp["data"]}, message=resp["message"])
+
+    return ErrorResponseModel(error={"error": resp["error"]}, statuscode=500)
+
+
+@router.get(
+    "/members/me",
+    response_description="Returns the details of the user who is currently logged in.",
+    response_model=GenericResponseSchema[GetSingleMemberResponseModel],
+)
+def getMe(user: JWTToken = Depends(authHandler.authenticateUser)):
+    """Finds and returns the credentials of logged in user"""
+    resp = getMemberWithGivenId(id=user.id, isParsed=True)
+    if resp["statusCode"] == 200:
+        return ResponseModel(data={"member": resp["data"]}, message=resp["message"])
+
+    return ErrorResponseModel(error={"error": resp["error"]}, statuscode=500)
+
+
+@router.put(
+    "/members/me",
+    response_description="Updates the current user's data (discordHandle, password, batch, name) with the provided data",
+    response_model=GenericResponseSchema[UpdateMyUserModel],
+)
+def updateUserDetails(
+    creds: UpdateMemberSchema = Body(...),
+    user: JWTToken = Depends(authHandler.authenticateUser),
+):
+    """Updates the current user's details with the given details.
+    **NOTE**: You cannot update the user's roll number with this route"""
+    resp = updateMemberWithGivenDetails(data=creds, userId=user.id, isParsed=True)
+
+    if resp["statusCode"] == 200:
+        return ResponseModel(data={"member": resp["data"]}, message=resp["message"])
+
+    if resp["statusCode"] == 400:
+        ErrorResponseModel(
+            error={"error": resp["error"]}, statuscode=400, message=resp["message"]
+        )
 
     return ErrorResponseModel(error={"error": resp["error"]}, statuscode=500)
 
@@ -209,9 +261,10 @@ def getAllMembers(request: Request, response: Response):
     response_description="Details of the user with the given userId",
     response_model=GenericResponseSchema[GetSingleMemberResponseModel],
 )
-def getSingleMember(memberId: str, request: Request):
+def getSingleMember(
+    memberId: str,
+):
     """Finds the member with the given user id"""
-    authHandler.authenticateUser(request)
     resp = getMemberWithGivenId(id=memberId, isParsed=True)
 
     if resp["statusCode"] == 200:

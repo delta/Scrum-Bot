@@ -16,6 +16,9 @@
                 <li><a href="/register">REGISTER</a></li>
             {/if}
             {#if localStorage.getItem("token")}
+                <li><a href='/edit'>EDIT PROFILE</a></li>
+            {/if}
+            {#if localStorage.getItem("token")}
                 <li><a href='#/' on:click={logout}>LOGOUT</a></li>
             {:else}
                 <li><a href="/logout">LOGIN</a></li>
@@ -26,6 +29,9 @@
                 <li><a href="/scrum">SCRUMS</a></li>
                 {#if !localStorage.getItem("token")}
                     <li><a href="/register">REGISTER</a></li>
+                {/if}
+                {#if localStorage.getItem("token")}
+                    <li><a href='/edit'>EDIT PROFILE</a></li>
                 {/if}
                 {#if localStorage.getItem("token")}
                     <li><a href='#/' on:click={logout}>LOGOUT</a></li>

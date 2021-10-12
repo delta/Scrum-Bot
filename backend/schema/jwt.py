@@ -8,6 +8,5 @@ class _JWTUser(BaseModel):
     rollno: int
 
 
-class JWTToken(BaseModel):
+class JWTToken(_JWTUser):
     exp: Optional[datetime]
-    sub: Optional[_JWTUser]

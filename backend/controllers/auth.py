@@ -40,7 +40,9 @@ def register(user):
             return parseControllerResponse(
                 data="Failure",
                 statusCode=11000,
-                error='A user already exists with the rollno "{}"'.format(user["rollno"]),
+                error='A user already exists with the rollno "{}"'.format(
+                    user["rollno"]
+                ),
                 message="A document with the given data already exists",
             )
         return parseControllerResponse(

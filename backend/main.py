@@ -1,5 +1,5 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.events import createStartAppHandler, createStopAppHandler
@@ -9,6 +9,11 @@ from app.logging import setup_logging
 from routes.auth import router as member_router
 from routes.bot import router as bot_router
 from routes.api import router as api_router
+
+from app.auth import Authorization
+
+apiAuthHandler = Authorization(type="jwt")
+botAuthHandler = Authorization(type="bot")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=PORT, reload=RELOAD, debug=DEBUG)
@@ -26,8 +31,18 @@ app.add_middleware(
 )
 
 app.include_router(member_router, tags=["auth"], prefix="/auth")
-app.include_router(bot_router, tags=["bot"], prefix="/bot")
-app.include_router(api_router, tags=["Api"], prefix="/api")
+app.include_router(
+    bot_router,
+    tags=["bot"],
+    prefix="/bot",
+    dependencies=[Depends(botAuthHandler.authenticateUser)],
+)
+app.include_router(
+    api_router,
+    tags=["Api"],
+    prefix="/api",
+    dependencies=[Depends(apiAuthHandler.authenticateUser)],
+)
 
 app.add_event_handler("startup", createStartAppHandler(app))
 app.add_event_handler("shutdown", createStopAppHandler(app))

@@ -71,7 +71,7 @@ class Authorization(object):
             return self._handle_Raise403Exception(1, (self.headerName,))
 
         self.verifyHeaderDataAndStorePayload()
-        return
+        return self.payload
 
     def verifyHeaderDataAndStorePayload(self):
         """Verifies the header data, stores payload (if any)"""
@@ -116,7 +116,7 @@ class Authorization(object):
             decodedToken = JWTToken(
                 **jwt.decode(self.headerData, JWT_SECRET, JWT_ALGORITHM)
             )
-            payload = decodedToken.sub
+            payload = decodedToken
 
             if payload == None:
                 return self._handle_Raise403Exception(3, tuple())
