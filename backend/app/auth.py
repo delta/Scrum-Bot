@@ -71,7 +71,7 @@ class Authorization(object):
             return self._handle_Raise403Exception(1, (self.headerName,))
 
         self.verifyHeaderDataAndStorePayload()
-        return self.payload
+        return self.payload if self.type == "jwt" else ""
 
     def verifyHeaderDataAndStorePayload(self):
         """Verifies the header data, stores payload (if any)"""
